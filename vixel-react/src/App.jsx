@@ -4,38 +4,48 @@ import GameStats from './components/GameStats';
 import FormTambahGame from './components/FormTambahGame';
 import GameList from './components/GameList';
 
+const BACKEND_URL = 'http://localhost:3000/games';
+
 function App() {
-  // 1. Ubah inisialisasi state menjadi array kosong
-  const [games, setGames] = useState([]);
-  
-  // 2. Tambahkan state untuk status Loading dan Error
+  const [backendGames, setBackendGames] = useState([]);
+  const [rawgGames, setRawgGames] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
 
-  // 3. Buat fungsi untuk mengambil data dari RAWG
-  const fetchGames = async () => {
+  // 1. GET dari Backend NestJS
+  const fetchBackendGames = async () => {
+    try {
+      const response = await fetch(BACKEND_URL);
+      if (response.ok) {
+        const data = await response.json();
+        setBackendGames(data);
+      }
+    } catch (error) {
+      console.error('Gagal memuat data dari backend:', error);
+    }
+  };
+
+  // 2. GET dari RAWG API (Eksternal)
+  const fetchRawgGames = async () => {
     setIsLoading(true);
     setIsError(false);
     try {
       const apiKey = '4acb861230ec4f388a12d8ec451fec30';
       const mood = 'atmospheric';
-      
-      // Fetch ke endpoint RAWG API
-      const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&tags=${mood}&page_size=16`);
-      
-      if (!response.ok) throw new Error('Gagal mengambil data dari API');
-      
+      const response = await fetch(
+        `https://api.rawg.io/api/games?key=${apiKey}&tags=${mood}&page_size=16`
+      );
+      if (!response.ok) throw new Error('Gagal mengambil data dari RAWG');
+
       const data = await response.json();
-      
-      // 4. Sesuaikan format data RAWG dengan format props GameCard
       const formattedGames = data.results.map((game) => ({
         id: game.id,
-        title: game.name, 
-        genre: game.genres.map(g => g.name).join(', ') || 'Atmospheric', 
-        image: game.background_image 
+        title: game.name,
+        genre: game.genres.map((g) => g.name).join(', ') || 'Atmospheric',
+        image: game.background_image,
       }));
-      
-      setGames(formattedGames);
+
+      setRawgGames(formattedGames);
     } catch (error) {
       setIsError(true);
     } finally {
@@ -43,26 +53,83 @@ function App() {
     }
   };
 
-  // 5. Panggil fungsi fetch saat aplikasi pertama kali dimuat
   useEffect(() => {
-    fetchGames();
+    fetchBackendGames();
+    fetchRawgGames();
   }, []);
 
-  const handleAddGame = (newGame) => {
-    const gameToInsert = {
-      id: Date.now(),
-      title: newGame.title,
-      genre: newGame.genre,
-      image: ''
-    };
-    setGames([...games, gameToInsert]);
+  // 3. POST ke Backend NestJS (Tambah Data)
+  const handleAddGame = async (newGame) => {
+    try {
+      const response = await fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGame),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        alert(Array.isArray(data.message) ? data.message.join(', ') : data.message);
+        return;
+      }
+
+      setBackendGames((prev) => [...prev, data]);
+    } catch (error) {
+      alert('Gagal terhubung ke server backend');
+    }
+  };
+
+  // 4. PATCH ke Backend NestJS (Ubah Data)
+  const handleToggleComplete = async (game) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/${game.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isCompleted: !game.isCompleted }),
+      });
+
+      if (response.ok) {
+        const updatedGame = await response.json();
+        setBackendGames((prev) =>
+          prev.map((item) => (item.id === game.id ? updatedGame : item))
+        );
+      }
+    } catch (error) {
+      console.error('Gagal mengubah data:', error);
+    }
+  };
+
+  // 5. DELETE ke Backend NestJS (Hapus Data)
+  const handleDeleteGame = async (id) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setBackendGames((prev) => prev.filter((item) => item.id !== id));
+      }
+    } catch (error) {
+      console.error('Gagal menghapus data:', error);
+    }
   };
 
   return (
     <div className="app-container">
       <Header />
-      
-      {/* 6. Conditional Rendering */}
+      <GameStats count={backendGames.length + rawgGames.length} />
+
+      {/* CRUD yang terhubung ke Backend NestJS */}
+      <FormTambahGame onAddGame={handleAddGame} />
+      <GameList
+        sectionTitle="Koleksi Game Saya"
+        games={backendGames}
+        isBackend={true}
+        onToggleComplete={handleToggleComplete}
+        onDelete={handleDeleteGame}
+      />
+
+      {/*  Katalog dari RAWG API */}
       {isLoading ? (
         <div style={{ textAlign: 'center', margin: '40px 0' }}>
           <h3>Memuat atmosfer game... ⏳</h3>
@@ -70,20 +137,19 @@ function App() {
       ) : isError ? (
         <div style={{ textAlign: 'center', margin: '40px 0', color: '#ff4d4f' }}>
           <h3>Waduh, koneksi terputus. Gagal memuat game dari RAWG.</h3>
-          {/* Tombol "Coba Lagi" khusus saat error */}
-          <button 
-            onClick={fetchGames} 
+          <button
+            onClick={fetchRawgGames}
             style={{ padding: '8px 16px', marginTop: '10px', cursor: 'pointer' }}
           >
             Coba Lagi
           </button>
         </div>
       ) : (
-        <>
-          <GameStats count={games.length} />
-          <FormTambahGame onAddGame={handleAddGame} />
-          <GameList games={games} />
-        </>
+        <GameList
+          sectionTitle="Rekomendasi Game"
+          games={rawgGames}
+          isBackend={false}
+        />
       )}
     </div>
   );
