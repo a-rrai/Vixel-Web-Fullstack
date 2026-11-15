@@ -35,7 +35,7 @@ function App() {
       const response = await fetch(
         `https://api.rawg.io/api/games?key=${apiKey}&tags=${mood}&page_size=16`
       );
-      if (!response.ok) throw new Error('Gagal mengambil data dari RAWG');
+      if (!response.ok) throw new Error('Gagal mengambil data dari RAWG API');
 
       const data = await response.json();
       const formattedGames = data.results.map((game) => ({
@@ -129,7 +129,7 @@ function App() {
         onDelete={handleDeleteGame}
       />
 
-      {/*  Katalog dari RAWG API */}
+      {/*  Katalog RAWG API */}
       {isLoading ? (
         <div style={{ textAlign: 'center', margin: '40px 0' }}>
           <h3>Memuat atmosfer game... ⏳</h3>
