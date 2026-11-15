@@ -21,7 +21,7 @@ export default function GameCard({ game, isBackend, onToggleComplete, onDelete }
         <>
           <p>Rating: ⭐ {game.rating}</p>
           <p>Rilis: {game.releaseDate}</p>
-          <p>Status: {game.isCompleted ? '✅ Selesai' : '⏳ Belum Selesai'}</p>
+          <p>Status: {game.isCompleted ? 'Selesai' : 'Belum Selesai'}</p>
           <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
             <button onClick={() => onToggleComplete(game)}>
               {game.isCompleted ? 'Tandai Belum' : 'Tandai Selesai'}

@@ -11,7 +11,7 @@ export default function GameList({
     <div style={{ marginTop: '24px' }}>
       <h2>{sectionTitle}</h2>
       {games.length === 0 ? (
-        <p>Belum ada data game.</p>
+        <p>Belum ada game dalam daftar.</p>
       ) : (
         <div className="game-grid">
           {games.map((game) => (

@@ -9,7 +9,7 @@ export default function FormTambahGame({ onAddGame }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title || !genre || !rating || !releaseDate) {
-      alert('Harap isi semua field!');
+      alert('Harap isi semua field sebelum menambahkan game!');
       return;
     }
 
